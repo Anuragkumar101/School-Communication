@@ -14,7 +14,11 @@ import {
   Video,
   Sparkles,
   PlusCircle,
-  Rocket
+  Rocket,
+  Award,
+  Map,
+  Timer,
+  Brain
 } from "lucide-react";
 
 export default function LearningPage() {
@@ -160,6 +164,43 @@ export default function LearningPage() {
                   </Link>
                 </div>
               </div>
+            </Card>
+            
+            <Card className="bg-gradient-to-r from-primary/20 to-transparent">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  New Learning Features!
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Link href="/learning/achievements">
+                    <Button variant="outline" className="w-full flex items-center justify-start">
+                      <Award className="mr-2 h-4 w-4" />
+                      <span>Achievements</span>
+                    </Button>
+                  </Link>
+                  <Link href="/learning/journey-map">
+                    <Button variant="outline" className="w-full flex items-center justify-start">
+                      <Map className="mr-2 h-4 w-4" />
+                      <span>Journey Map</span>
+                    </Button>
+                  </Link>
+                  <Link href="/learning/study-timer">
+                    <Button variant="outline" className="w-full flex items-center justify-start">
+                      <Timer className="mr-2 h-4 w-4" />
+                      <span>Study Timer</span>
+                    </Button>
+                  </Link>
+                  <Link href="/learning/recommendations">
+                    <Button variant="outline" className="w-full flex items-center justify-start">
+                      <Brain className="mr-2 h-4 w-4" />
+                      <span>For You</span>
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
             </Card>
           </TabsContent>
 

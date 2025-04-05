@@ -17,6 +17,10 @@ import FactsPage from "@/pages/learning/facts";
 import VideosPage from "@/pages/learning/videos";
 import LeaderboardPage from "@/pages/learning/leaderboard";
 import ChallengesPage from "@/pages/learning/challenges";
+import AchievementsPage from "@/pages/learning/achievements";
+import JourneyMapPage from "@/pages/learning/journey-map";
+import StudyTimerPage from "@/pages/learning/study-timer";
+import RecommendationsPage from "@/pages/learning/recommendations";
 import { AuthProvider } from "@/context/auth-context";
 
 function Router() {
@@ -38,6 +42,10 @@ function Router() {
         <Route path="/learning/videos" component={VideosPage} />
         <Route path="/learning/leaderboard" component={LeaderboardPage} />
         <Route path="/learning/challenges" component={ChallengesPage} />
+        <Route path="/learning/achievements" component={AchievementsPage} />
+        <Route path="/learning/journey-map" component={JourneyMapPage} />
+        <Route path="/learning/study-timer" component={StudyTimerPage} />
+        <Route path="/learning/recommendations" component={RecommendationsPage} />
         
         <Route component={NotFound} />
       </Switch>
