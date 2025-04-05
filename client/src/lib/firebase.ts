@@ -2,21 +2,32 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
+import { getAnalytics } from "firebase/analytics";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || ""}.firebaseapp.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID || ""}.appspot.com`,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB9cLcIa8N3lHj_LfEotm11xgyWnj-jlQw",
+  authDomain: "schoolconnect-d7064.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "schoolconnect-d7064",
+  storageBucket: "schoolconnect-d7064.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "753560091419",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:753560091419:web:5a7665df668dae108cf1be",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-GBF7PXXTC0"
 };
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Initialize Analytics
+let analytics: any = null;
+try {
+  analytics = getAnalytics(app);
+} catch (error) {
+  console.error("Firebase analytics is not supported in this environment", error);
+}
+export { analytics };
 
 // Initialize Messaging for push notifications
 let messaging: any = null;
