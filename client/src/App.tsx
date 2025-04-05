@@ -22,6 +22,7 @@ import JourneyMapPage from "@/pages/learning/journey-map";
 import StudyTimerPage from "@/pages/learning/study-timer";
 import RecommendationsPage from "@/pages/learning/recommendations";
 import { AuthProvider } from "@/context/auth-context";
+import { AdminProvider } from "@/context/admin-context";
 
 function Router() {
   return (
@@ -57,8 +58,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router />
-        <Toaster />
+        <AdminProvider>
+          <Router />
+          <Toaster />
+        </AdminProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
