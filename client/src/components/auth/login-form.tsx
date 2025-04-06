@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import Spinner from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -22,6 +24,7 @@ interface LoginFormProps {
 const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signInWithEmail, signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [googleSignInError, setGoogleSignInError] = useState<string | null>(null);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -45,11 +48,17 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setGoogleSignInError(null);
     try {
       const user = await signInWithGoogle();
       if (user) {
         onSuccess();
       }
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      setGoogleSignInError(
+        "Google Sign-In failed. Please use email and password login instead, or try again later."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -57,6 +66,14 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   return (
     <div className="space-y-4">
+      {googleSignInError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <AlertTitle>Sign-in Error</AlertTitle>
+          <AlertDescription>{googleSignInError}</AlertDescription>
+        </Alert>
+      )}
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -116,6 +133,16 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
           </span>
         </div>
       </div>
+      
+      {/* Google Sign-in warning alert */}
+      <Alert variant="destructive" className="mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Important Notice</AlertTitle>
+        <AlertDescription>
+          Google Sign-In may have issues on some mobile devices due to domain restrictions.
+          We recommend using email/password login instead.
+        </AlertDescription>
+      </Alert>
       
       <Button 
         type="button" 

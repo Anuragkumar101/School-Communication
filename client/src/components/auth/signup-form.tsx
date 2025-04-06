@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useAuth } from "@/hooks/use-auth";
 import Spinner from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 
 const signupSchema = z.object({
   displayName: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -27,6 +29,7 @@ interface SignupFormProps {
 const SignupForm = ({ onSuccess }: SignupFormProps) => {
   const { signUp, signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [googleSignInError, setGoogleSignInError] = useState<string | null>(null);
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
@@ -52,11 +55,17 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setGoogleSignInError(null);
     try {
       const user = await signInWithGoogle();
       if (user) {
         onSuccess();
       }
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      setGoogleSignInError(
+        "Google Sign-In failed. Please use email and password signup instead, or try again later."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +171,16 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
         </div>
       </div>
       
+      {/* Google Sign-in warning alert */}
+      <Alert variant="destructive" className="mb-4">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Important Notice</AlertTitle>
+        <AlertDescription>
+          Google Sign-In may have issues on some mobile devices due to domain restrictions.
+          We recommend using email/password registration instead.
+        </AlertDescription>
+      </Alert>
+      
       <Button 
         type="button" 
         variant="outline" 
@@ -186,6 +205,13 @@ const SignupForm = ({ onSuccess }: SignupFormProps) => {
         </svg>
         Sign up with Google
       </Button>
+      
+      {/* Display error message if Google sign-in fails */}
+      {googleSignInError && (
+        <div className="mt-2 text-center text-xs text-red-500">
+          {googleSignInError}
+        </div>
+      )}
     </div>
   );
 };
