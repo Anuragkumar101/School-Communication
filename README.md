@@ -43,10 +43,59 @@ A Progressive Web App for school friends to stay connected with real-time chat, 
 
 ### Firebase Configuration for Android
 
-1. Add Android app in Firebase Console
-2. Download google-services.json
-3. Place in android/app/ directory
-4. Update build.gradle files as needed
+1. Add Android app in Firebase Console:
+   - Use package name: `com.schoolconnect.app`
+   - App nickname: "SchoolConnect"
+   - Register app
+
+2. Download `google-services.json` (already included in this project)
+3. Place in `android/app/` directory
+
+4. Update build.gradle files:
+   
+   **Project-level build.gradle** (android/build.gradle):
+   ```gradle
+   buildscript {
+     dependencies {
+       // Add this line
+       classpath 'com.google.gms:google-services:4.3.15'
+     }
+   }
+   ```
+
+   **App-level build.gradle** (android/app/build.gradle):
+   ```gradle
+   // Add at the bottom of the file
+   apply plugin: 'com.google.gms.google-services'
+   
+   // In dependencies section:
+   dependencies {
+     // ... other dependencies
+     
+     // Firebase dependencies
+     implementation platform('com.google.firebase:firebase-bom:32.3.1')
+     implementation 'com.google.firebase:firebase-analytics'
+     implementation 'com.google.firebase:firebase-auth'
+     implementation 'com.google.firebase:firebase-firestore'
+     implementation 'com.google.firebase:firebase-messaging'
+     implementation 'com.google.android.gms:play-services-auth:20.6.0'
+   }
+   ```
+
+### Features Available in Android App
+
+The Android version of SchoolConnect includes all features from the web app plus:
+
+- Native push notifications
+- Offline access to critical features
+- Better performance on mobile devices
+- Enhanced security with device-level authentication options
+
+### Troubleshooting Android Build
+
+- If Google Sign-In isn't working: Verify the SHA-1 fingerprint in Firebase Console
+- For build errors: Check Android Studio's Logcat for detailed error messages
+- For Firebase initialization errors: Ensure google-services.json is placed correctly
 
 ## Development
 

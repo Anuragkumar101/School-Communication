@@ -1,6 +1,6 @@
 # Android Setup for SchoolConnect
 
-This guide provides detailed steps to convert your SchoolConnect web application to an Android app using Capacitor and Firebase.
+This guide provides detailed steps to convert the SchoolConnect web application to an Android app using Capacitor and Firebase.
 
 ## Prerequisites
 
@@ -8,6 +8,7 @@ This guide provides detailed steps to convert your SchoolConnect web application
 - Android Studio installed
 - Java Development Kit (JDK) version 11 or higher
 - Firebase project with web configuration (already set up)
+- `google-services.json` file from Firebase Android app registration
 
 ## Step 1: Build the Web App
 
@@ -34,24 +35,17 @@ npx cap sync android
 
 ## Step 3: Firebase Configuration for Android
 
-1. Go to your Firebase Console: https://console.firebase.google.com/
-2. Open your project
-3. Add a new Android app to your Firebase project:
-   - Click the Android icon to add an Android app
-   - Use the package name: `com.schoolconnect.app` (same as in capacitor.config.ts)
-   - Enter app nickname: "SchoolConnect"
-   - Add SHA-1 key (optional for now, required for Google Sign-In)
-   - Register the app
+1. Place your `google-services.json` file (from Firebase Console) in:
+   ```
+   android/app/google-services.json
+   ```
 
-4. Download the `google-services.json` file
-5. Place this file in your Android project's app directory: `android/app/google-services.json`
+2. Open the Android project in Android Studio:
+   ```bash
+   npx cap open android
+   ```
 
-6. Open the Android project in Android Studio:
-```bash
-npx cap open android
-```
-
-7. Update your Android project's build files to include Firebase:
+3. Update your Android project's build files to include Firebase:
 
    - **Project-level build.gradle** (android/build.gradle):
      Add Google services plugin to classpath
@@ -69,8 +63,6 @@ npx cap open android
      Apply the Google services plugin at the bottom of the file
 
    ```gradle
-   apply plugin: 'com.android.application'
-   // ... other code
    // Add this at the bottom of the file
    apply plugin: 'com.google.gms.google-services'
    ```
@@ -91,16 +83,27 @@ npx cap open android
    }
    ```
 
-## Step 4: Native Firebase Setup (If needed)
+## Step 4: Firebase Authentication Setup
 
-For deeper native integration (like push notifications), you'll need Capacitor Firebase plugins:
+For Google Sign-In and Firebase Auth to work on Android:
 
-```bash
-npm install @capacitor-firebase/authentication @capacitor-firebase/messaging
-npx cap sync android
-```
+1. In Android Studio, add these to your dependencies if not already present:
+   ```gradle
+   implementation 'com.google.android.gms:play-services-auth:20.6.0'
+   ```
 
-Then update your `capacitor.config.ts` file to include the Firebase plugin configurations.
+2. In your `MainActivity.java` (or `.kt` if using Kotlin), add plugin registration for Firebase:
+   ```java
+   // Java version
+   import com.getcapacitor.BridgeActivity;
+
+   public class MainActivity extends BridgeActivity {
+     @Override
+     public void onCreate(Bundle savedInstanceState) {
+       super.onCreate(savedInstanceState);
+     }
+   }
+   ```
 
 ## Step 5: Building and Testing
 
@@ -115,24 +118,31 @@ cd android
 npx cap run android
 ```
 
-## Important Notes
+## Troubleshooting
 
-1. **Google Sign-In with SHA-1 Key**:
-   - For Google Sign-In to work on Android, you must add your SHA-1 key to Firebase
-   - You can get this from your keystore file or using:
-     ```bash
-     cd android
-     ./gradlew signingReport
-     ```
+1. **Firebase Auth Issues**:
+   - Check that your SHA-1 fingerprint in Firebase console matches your build environment
+   - For debug builds, ensure the debug SHA-1 is added
+   - For release builds, add the release SHA-1 as well
 
-2. **Android Manifest Permissions**:
-   - Check `android/app/src/main/AndroidManifest.xml` for proper permissions
-   - For notifications, internet access, etc.
+2. **Build Issues**:
+   - Make sure `google-services.json` is in the correct location
+   - Check Gradle version compatibility
+   - Ensure all Firebase dependencies are correctly added
 
-3. **Custom URL Schemes**:
-   - For deep linking, update AndroidManifest.xml and capacitor.config.ts
+3. **Runtime Errors**:
+   - Check Android Logcat for detailed error messages
+   - Verify that all required permissions are in the AndroidManifest.xml
 
-4. **Troubleshooting**:
-   - If you encounter Firebase initialization errors, check package name consistency
-   - Ensure google-services.json is in the correct location
-   - Verify Gradle files have proper Firebase dependencies and plugins
+## Further Customization
+
+1. **App Icon**:
+   - Replace the icon files in `android/app/src/main/res/` directories
+   - Different size icons go in different 'mipmap' folders
+
+2. **Splash Screen**:
+   - Customize splash screen in `android/app/src/main/res/drawable/splash.png`
+
+3. **Deep Linking**:
+   - For custom URL schemes, update the `AndroidManifest.xml` 
+   - Add Intent filters for handling deep links
