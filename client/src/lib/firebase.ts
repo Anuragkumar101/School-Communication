@@ -5,14 +5,15 @@ import { getMessaging, getToken } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
 
 // Firebase configuration
+// This is the Web app configuration, for Android we'll need additional setup
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyB9cLcIa8N3lHj_LfEotm11xgyWnj-jlQw",
+  apiKey: "AIzaSyB9cLcIa8N3lHj_LfEotm11xgyWnj-jlQw",
   authDomain: "schoolconnect-d7064.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "schoolconnect-d7064",
+  projectId: "schoolconnect-d7064",
   storageBucket: "schoolconnect-d7064.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "753560091419",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:753560091419:web:5a7665df668dae108cf1be",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-GBF7PXXTC0"
+  messagingSenderId: "753560091419",
+  appId: "1:753560091419:web:5a7665df668dae108cf1be",
+  measurementId: "G-GBF7PXXTC0"
 };
 
 // Initialize Firebase
