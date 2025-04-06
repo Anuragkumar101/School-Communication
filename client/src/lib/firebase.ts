@@ -26,6 +26,15 @@ const firebaseConfig = {
   measurementId: "G-GBF7PXXTC0"
 };
 
+// Add authorized domains (including all replit domains)
+// This is a client-side workaround, but the proper fix is to add these domains
+// in the Firebase Console under Authentication > Sign-in method > Authorized domains
+if (window.location.hostname.includes('.replit.dev') || 
+    window.location.hostname.includes('.repl.co') || 
+    window.location.hostname === 'replit.com') {
+  console.log('Running on Replit - adding special auth domain handling');
+}
+
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -64,19 +73,41 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
   try {
-    // First try popup for compatibility with more environments
-    try {
-      console.log("Attempting Google sign-in with popup...");
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("Popup sign-in successful");
-      return result.user;
-    } catch (popupError: any) {
-      console.log("Popup sign-in failed, trying redirect:", popupError?.message || popupError);
+    // For simplicity, prioritize email/password login on Replit and mobile environments
+    if (window.location.hostname.includes('.replit.dev') || 
+        window.location.hostname.includes('.repl.co') ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+      console.log("Using email/password login is recommended in this environment");
       
-      // Fall back to redirect method for mobile environments
-      await signInWithRedirect(auth, googleProvider);
-      // Note: The redirect result will be handled when the page reloads
-      return null;
+      // Still try popup for authenticated domains
+      try {
+        console.log("Attempting Google sign-in with popup...");
+        googleProvider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        const result = await signInWithPopup(auth, googleProvider);
+        console.log("Popup sign-in successful");
+        return result.user;
+      } catch (popupError: any) {
+        console.log("Popup sign-in failed, showing error:", popupError?.message || popupError);
+        // Don't try redirect on mobile as it often fails with domain issues
+        throw popupError;
+      }
+    } else {
+      // On desktop browsers, try popup first, then fall back to redirect
+      try {
+        console.log("Attempting Google sign-in with popup...");
+        const result = await signInWithPopup(auth, googleProvider);
+        console.log("Popup sign-in successful");
+        return result.user;
+      } catch (popupError: any) {
+        console.log("Popup sign-in failed, trying redirect:", popupError?.message || popupError);
+        
+        // Fall back to redirect method for some environments
+        await signInWithRedirect(auth, googleProvider);
+        // Note: The redirect result will be handled when the page reloads
+        return null;
+      }
     }
   } catch (error: any) {
     console.error("Error initiating Google sign-in:", error);

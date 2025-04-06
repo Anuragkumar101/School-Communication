@@ -139,8 +139,8 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Important Notice</AlertTitle>
         <AlertDescription>
-          Google Sign-In may have issues on some mobile devices due to domain restrictions.
-          We recommend using email/password login instead.
+          Google Sign-In may have issues on mobile devices and replit.dev domains.
+          Please use email/password login instead for the most reliable experience.
         </AlertDescription>
       </Alert>
       
@@ -149,7 +149,7 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
         variant="outline" 
         className="w-full" 
         onClick={handleGoogleSignIn}
-        disabled={isLoading}
+        disabled={isLoading || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)}
       >
         <svg
           className="mr-2 h-4 w-4"
