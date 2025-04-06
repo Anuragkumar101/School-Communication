@@ -237,3 +237,38 @@ export type QuizAttempt = typeof quizAttempts.$inferSelect;
 
 export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
 export type Challenge = typeof challenges.$inferSelect;
+
+// Homework help bot conversations
+export const homeworkHelp = pgTable("homework_help", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHomeworkHelpSchema = createInsertSchema(homeworkHelp).pick({
+  userId: true,
+  title: true,
+});
+
+// Messages between user and AI in homework help
+export const homeworkHelpMessages = pgTable("homework_help_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => homeworkHelp.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  isFromAI: boolean("is_from_ai").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertHomeworkHelpMessageSchema = createInsertSchema(homeworkHelpMessages).pick({
+  conversationId: true,
+  content: true,
+  isFromAI: true,
+});
+
+export type InsertHomeworkHelp = z.infer<typeof insertHomeworkHelpSchema>;
+export type HomeworkHelp = typeof homeworkHelp.$inferSelect;
+
+export type InsertHomeworkHelpMessage = z.infer<typeof insertHomeworkHelpMessageSchema>;
+export type HomeworkHelpMessage = typeof homeworkHelpMessages.$inferSelect;

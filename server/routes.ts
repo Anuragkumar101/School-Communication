@@ -13,6 +13,42 @@ import {
   insertChallengeSchema 
 } from "@shared/schema";
 
+// Helper service for the Homework Help Bot
+class HomeworkHelpService {
+  static async generateAIResponse(prompt: string, userId: number): Promise<string> {
+    // We'll replace this with actual AI API calls when we have the API key
+    // For now, return a simple response based on the prompt
+    
+    // Basic responses to common prompts
+    if (prompt.toLowerCase().includes('hello') || prompt.toLowerCase().includes('hi')) {
+      return "Hello! I'm your homework help assistant. How can I help you today?";
+    }
+    
+    if (prompt.toLowerCase().includes('math') || prompt.toLowerCase().includes('equation')) {
+      return "I can help with math problems! Could you provide the specific equation or problem you're working on?";
+    }
+    
+    if (prompt.toLowerCase().includes('history')) {
+      return "History is fascinating! What specific historical period or event are you studying?";
+    }
+    
+    if (prompt.toLowerCase().includes('science') || prompt.toLowerCase().includes('biology') || prompt.toLowerCase().includes('chemistry') || prompt.toLowerCase().includes('physics')) {
+      return "I'd be happy to help with your science questions. What specific concept are you having trouble with?";
+    }
+    
+    if (prompt.toLowerCase().includes('help') || prompt.toLowerCase().includes('don\'t understand')) {
+      return "I'm here to help! Please share the specific topic or question you're struggling with, and I'll do my best to explain it.";
+    }
+    
+    if (prompt.toLowerCase().includes('thank')) {
+      return "You're welcome! Feel free to ask if you have any other questions.";
+    }
+    
+    // Generic response for other prompts
+    return "I understand you're asking about '" + prompt + "'. To give you the best help, could you provide more specific details about what you're studying or the particular question you have?";
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // User synchronization route
   app.post("/api/users/sync", async (req, res) => {
@@ -336,6 +372,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating challenge:", error);
       res.status(500).json({ message: "Failed to update challenge" });
+    }
+  });
+
+  // ============ Homework Help API Routes ============
+  // Get user's homework help conversations
+  app.get("/api/homework-help/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const conversations = await storage.getHomeworkHelpConversations(userId);
+      res.json(conversations);
+    } catch (error) {
+      console.error("Error fetching homework help conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+  
+  // Get a specific conversation
+  app.get("/api/homework-help/conversation/:id", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getHomeworkHelpConversation(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      const messages = await storage.getHomeworkHelpMessages(conversationId);
+      res.json({ ...conversation, messages });
+    } catch (error) {
+      console.error("Error fetching homework help conversation:", error);
+      res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+  
+  // Create a new conversation
+  app.post("/api/homework-help", async (req, res) => {
+    try {
+      const { userId, title } = req.body;
+      
+      if (!userId || !title) {
+        return res.status(400).json({ message: "User ID and title are required" });
+      }
+      
+      const conversation = await storage.createHomeworkHelpConversation({
+        userId: parseInt(userId),
+        title
+      });
+      
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error("Error creating homework help conversation:", error);
+      res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+  
+  // Send a message to the homework help bot
+  app.post("/api/homework-help/:conversationId/messages", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      const { content, userId } = req.body;
+      
+      if (!content) {
+        return res.status(400).json({ message: "Message content is required" });
+      }
+      
+      // Create user message
+      const userMessage = await storage.createHomeworkHelpMessage({
+        conversationId,
+        content,
+        isFromAI: false
+      });
+      
+      // Generate AI response
+      const aiResponse = await HomeworkHelpService.generateAIResponse(content, parseInt(userId));
+      
+      // Create AI message
+      const aiMessage = await storage.createHomeworkHelpMessage({
+        conversationId,
+        content: aiResponse,
+        isFromAI: true
+      });
+      
+      res.json({
+        userMessage,
+        aiMessage
+      });
+    } catch (error) {
+      console.error("Error sending message to homework help bot:", error);
+      res.status(500).json({ message: "Failed to send message" });
     }
   });
 

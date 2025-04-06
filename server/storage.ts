@@ -6,7 +6,9 @@ import {
   dailyFacts, type DailyFact, type InsertDailyFact,
   learningVideos, type LearningVideo, type InsertLearningVideo,
   quizAttempts, type QuizAttempt, type InsertQuizAttempt,
-  challenges, type Challenge, type InsertChallenge
+  challenges, type Challenge, type InsertChallenge,
+  homeworkHelp, type HomeworkHelp, type InsertHomeworkHelp,
+  homeworkHelpMessages, type HomeworkHelpMessage, type InsertHomeworkHelpMessage
 } from "@shared/schema";
 
 // modify the interface with any CRUD methods
@@ -49,6 +51,15 @@ export interface IStorage {
   getChallenges(userId: number, status?: string): Promise<Challenge[]>;
   createChallenge(challenge: InsertChallenge): Promise<Challenge>;
   updateChallenge(id: number, data: Partial<Challenge>): Promise<Challenge>;
+  
+  // Homework Help methods
+  getHomeworkHelpConversations(userId: number): Promise<HomeworkHelp[]>;
+  getHomeworkHelpConversation(id: number): Promise<HomeworkHelp | undefined>;
+  createHomeworkHelpConversation(conversation: InsertHomeworkHelp): Promise<HomeworkHelp>;
+  
+  // Homework Help Message methods
+  getHomeworkHelpMessages(conversationId: number): Promise<HomeworkHelpMessage[]>;
+  createHomeworkHelpMessage(message: InsertHomeworkHelpMessage): Promise<HomeworkHelpMessage>;
 }
 
 // Import database and necessary operators from drizzle-orm
@@ -56,6 +67,54 @@ import { db } from './db';
 import { eq, desc, or, sql, and, isNull } from 'drizzle-orm';
 
 export class DatabaseStorage implements IStorage {
+  // Homework Help methods
+  async getHomeworkHelpConversations(userId: number): Promise<HomeworkHelp[]> {
+    return db
+      .select()
+      .from(homeworkHelp)
+      .where(eq(homeworkHelp.userId, userId))
+      .orderBy(desc(homeworkHelp.updatedAt));
+  }
+  
+  async getHomeworkHelpConversation(id: number): Promise<HomeworkHelp | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(homeworkHelp)
+      .where(eq(homeworkHelp.id, id));
+    return conversation;
+  }
+  
+  async createHomeworkHelpConversation(conversation: InsertHomeworkHelp): Promise<HomeworkHelp> {
+    const [newConversation] = await db
+      .insert(homeworkHelp)
+      .values(conversation)
+      .returning();
+    return newConversation;
+  }
+  
+  // Homework Help Message methods
+  async getHomeworkHelpMessages(conversationId: number): Promise<HomeworkHelpMessage[]> {
+    return db
+      .select()
+      .from(homeworkHelpMessages)
+      .where(eq(homeworkHelpMessages.conversationId, conversationId))
+      .orderBy(homeworkHelpMessages.createdAt);
+  }
+  
+  async createHomeworkHelpMessage(message: InsertHomeworkHelpMessage): Promise<HomeworkHelpMessage> {
+    const [newMessage] = await db
+      .insert(homeworkHelpMessages)
+      .values(message)
+      .returning();
+    
+    // Update the conversation's updatedAt timestamp
+    await db
+      .update(homeworkHelp)
+      .set({ updatedAt: new Date() })
+      .where(eq(homeworkHelp.id, message.conversationId));
+    
+    return newMessage;
+  }
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
