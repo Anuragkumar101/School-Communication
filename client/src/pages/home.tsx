@@ -12,7 +12,7 @@ const Home = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          {currentUser ? `Welcome, ${currentUser.displayName || 'Friend'}!` : 'Welcome to SchoolConnect'}
+          {currentUser ? `Welcome, ${currentUser.displayName || 'Friend'}!` : 'Welcome to LOYAL COMMUNITY'}
         </h1>
         <p className="text-muted-foreground">
           Stay connected with your school friends and keep track of your homework and schedule.

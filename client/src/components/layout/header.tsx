@@ -32,7 +32,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
             <MenuIcon className="h-6 w-6" />
             <span className="sr-only">Toggle menu</span>
           </Button>
-          <h1 className="text-xl font-bold">SchoolConnect</h1>
+          <h1 className="text-xl font-bold">LOYAL COMMUNITY</h1>
         </div>
         
         <div className="flex items-center space-x-2">

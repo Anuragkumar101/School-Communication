@@ -25,6 +25,7 @@ import AITutorPage from "@/pages/learning/ai-tutor";
 import ConversationsPage from "@/pages/conversations";
 import ConversationDetailPage from "@/pages/conversations/[id]";
 import NewConversationPage from "@/pages/conversations/new";
+import GitHubDeployPage from "@/pages/github-deploy";
 import { AuthProvider } from "@/context/auth-context";
 import { AdminProvider } from "@/context/admin-context";
 
@@ -57,6 +58,9 @@ function Router() {
         <Route path="/conversations" component={ConversationsPage} />
         <Route path="/conversations/new" component={NewConversationPage} />
         <Route path="/conversations/:id" component={ConversationDetailPage} />
+        
+        {/* Deployment Routes */}
+        <Route path="/github-deploy" component={GitHubDeployPage} />
         
         <Route component={NotFound} />
       </Switch>

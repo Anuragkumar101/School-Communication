@@ -170,7 +170,7 @@ const SettingsPage = () => {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            SchoolConnect automatically stores your data for offline access. The data will sync when you're back online.
+            LOYAL COMMUNITY automatically stores your data for offline access. The data will sync when you're back online.
           </p>
           
           <Button variant="outline">

@@ -9,7 +9,8 @@ import {
   SettingsIcon, 
   LogOutIcon,
   ClipboardListIcon,
-  UsersIcon
+  UsersIcon,
+  Github
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -75,6 +76,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       title: "Settings",
       icon: <SettingsIcon className="h-5 w-5" />,
       href: "/settings",
+    },
+    {
+      title: "GitHub Deploy",
+      icon: <Github className="h-5 w-5" />,
+      href: "/github-deploy",
     },
   ];
 

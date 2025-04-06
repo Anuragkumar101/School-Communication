@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { AILearningService } from "./ai-learning-service";
+import { ContentGenerationService } from "./content-generation-service";
 import { 
   insertUserSchema, 
   insertQuizSchema, 
@@ -921,6 +922,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking message as read:", error);
       res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  // === Content Generation Routes ===
+  
+  // Generate a quiz with AI
+  app.post("/api/generate/quiz", async (req, res) => {
+    try {
+      const { subject, topic, difficulty, questionCount } = req.body;
+      
+      if (!subject) {
+        return res.status(400).json({ message: "Subject is required" });
+      }
+      
+      const quiz = await ContentGenerationService.generateQuiz(
+        subject,
+        topic,
+        difficulty as "easy" | "medium" | "hard" || "medium",
+        questionCount || 5
+      );
+      
+      res.json(quiz);
+    } catch (error: any) {
+      console.error("Error generating quiz:", error);
+      res.status(500).json({ message: error.message || "Failed to generate quiz" });
+    }
+  });
+  
+  // Generate flashcards with AI
+  app.post("/api/generate/flashcards", async (req, res) => {
+    try {
+      const { subject, topic, count } = req.body;
+      
+      if (!subject) {
+        return res.status(400).json({ message: "Subject is required" });
+      }
+      
+      const flashcards = await ContentGenerationService.generateFlashcards(
+        subject,
+        topic,
+        count || 10
+      );
+      
+      res.json(flashcards);
+    } catch (error: any) {
+      console.error("Error generating flashcards:", error);
+      res.status(500).json({ message: error.message || "Failed to generate flashcards" });
+    }
+  });
+  
+  // Generate a daily fact with AI
+  app.post("/api/generate/daily-fact", async (req, res) => {
+    try {
+      const { subject } = req.body;
+      
+      const fact = await ContentGenerationService.generateDailyFact(subject);
+      
+      res.json(fact);
+    } catch (error: any) {
+      console.error("Error generating daily fact:", error);
+      res.status(500).json({ message: error.message || "Failed to generate daily fact" });
+    }
+  });
+  
+  // Generate video recommendations with AI
+  app.post("/api/generate/video-recommendations", async (req, res) => {
+    try {
+      const { subject, topic, count } = req.body;
+      
+      if (!subject) {
+        return res.status(400).json({ message: "Subject is required" });
+      }
+      
+      const recommendations = await ContentGenerationService.generateVideoRecommendations(
+        subject,
+        topic,
+        count || 5
+      );
+      
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error("Error generating video recommendations:", error);
+      res.status(500).json({ message: error.message || "Failed to generate video recommendations" });
     }
   });
 
