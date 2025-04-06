@@ -10,7 +10,8 @@ import {
   LogOutIcon,
   ClipboardListIcon,
   UsersIcon,
-  Github
+  Github,
+  HeartIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -57,6 +58,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       icon: <CalendarIcon className="h-5 w-5" />,
       href: "/timetable",
       section: "Collaborate"
+    },
+    {
+      title: "Social",
+      icon: <HeartIcon className="h-5 w-5" />,
+      href: "/social",
+      section: "Explore"
     },
     {
       title: "Learning",

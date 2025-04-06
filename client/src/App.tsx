@@ -26,6 +26,10 @@ import ConversationsPage from "@/pages/conversations";
 import ConversationDetailPage from "@/pages/conversations/[id]";
 import NewConversationPage from "@/pages/conversations/new";
 import GitHubDeployPage from "@/pages/github-deploy";
+import SocialPage from "@/pages/social";
+import GamesPage from "@/pages/social/games";
+import EventsPage from "@/pages/social/events";
+import PollsPage from "@/pages/social/polls";
 import { AuthProvider } from "@/context/auth-context";
 import { AdminProvider } from "@/context/admin-context";
 
@@ -59,6 +63,12 @@ function Router() {
         <Route path="/conversations/new" component={NewConversationPage} />
         <Route path="/conversations/:id" component={ConversationDetailPage} />
         
+        {/* Social Routes */}
+        <Route path="/social" component={SocialPage} />
+        <Route path="/social/games" component={GamesPage} />
+        <Route path="/social/events" component={EventsPage} />
+        <Route path="/social/polls" component={PollsPage} />
+
         {/* Deployment Routes */}
         <Route path="/github-deploy" component={GitHubDeployPage} />
         
