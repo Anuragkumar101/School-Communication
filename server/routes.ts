@@ -164,11 +164,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Check if user exists by uid
-      const existingUser = await storage.getUserByUid(userData.uid);
+      // Check two ways: by uid first, then by email as username
+      const existingUserByUid = await storage.getUserByUid(userData.uid);
+      const existingUserByEmail = await storage.getUserByUsername(userData.email);
       
-      if (existingUser) {
-        // Update existing user
-        const updatedUser = await storage.updateUser(existingUser.id, userData);
+      if (existingUserByUid) {
+        // Update existing user found by uid
+        const updatedUser = await storage.updateUser(existingUserByUid.id, userData);
+        res.json(updatedUser);
+      } else if (existingUserByEmail) {
+        // Update existing user found by email, and set the correct uid
+        const updatedUser = await storage.updateUser(existingUserByEmail.id, {
+          ...userData,
+          uid: userData.uid // Make sure the UID is updated
+        });
         res.json(updatedUser);
       } else {
         // Create new user

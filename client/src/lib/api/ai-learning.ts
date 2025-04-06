@@ -28,7 +28,7 @@ export const askAI = async (
   category?: string,
   subject?: string
 ): Promise<AIResponse> => {
-  return apiRequest("/api/ai/ask", {
+  return apiRequest<AIResponse>("/api/ai/ask", {
     method: "POST",
     body: JSON.stringify({
       userId,
@@ -46,7 +46,7 @@ export const recordMistake = async (
   topic: string,
   details: string
 ): Promise<{ success: boolean }> => {
-  return apiRequest("/api/ai/record-mistake", {
+  return apiRequest<{ success: boolean }>("/api/ai/record-mistake", {
     method: "POST",
     body: JSON.stringify({
       userId,
@@ -62,8 +62,7 @@ export const getLearningProfile = async (
   userId: number
 ): Promise<UserLearningProfile | null> => {
   try {
-    const response = await apiRequest<UserLearningProfile>(`/api/ai/learning-profile/${userId}`);
-    return response;
+    return await apiRequest<UserLearningProfile>(`/api/ai/learning-profile/${userId}`);
   } catch (error) {
     if ((error as any).status === 404) {
       return null;
@@ -82,7 +81,7 @@ export const updateLearningProfile = async (
     interests?: string[];
   }
 ): Promise<UserLearningProfile> => {
-  return apiRequest("/api/ai/learning-profile", {
+  return apiRequest<UserLearningProfile>("/api/ai/learning-profile", {
     method: "POST",
     body: JSON.stringify({
       userId,
@@ -97,7 +96,7 @@ export const recordFeedback = async (
   interactionId: number,
   helpfulnessRating: number
 ): Promise<{ success: boolean }> => {
-  return apiRequest("/api/ai/feedback", {
+  return apiRequest<{ success: boolean }>("/api/ai/feedback", {
     method: "POST",
     body: JSON.stringify({
       userId,

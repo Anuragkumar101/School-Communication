@@ -16,6 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Brain, Lightbulb, MessageSquare, Settings, Sparkles, ThumbsUp, ThumbsDown, SendHorizonal } from "lucide-react";
+import { User as FirebaseUser } from "firebase/auth";
+
+// Extended Firebase user with database ID
+interface ExtendedUser extends FirebaseUser {
+  id?: number;
+}
 
 const subjects = [
   "Mathematics",
@@ -30,7 +36,8 @@ const subjects = [
 ];
 
 export default function AITutorPage() {
-  const { currentUser } = useAuth();
+  const { currentUser: fbUser } = useAuth();
+  const currentUser = fbUser as unknown as ExtendedUser;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");

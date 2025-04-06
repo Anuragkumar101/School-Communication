@@ -46,12 +46,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("Got user from redirect:", redirectUser);
           // If we got a user from redirect, sync with backend
           try {
-            await apiRequest("POST", "/api/users/sync", {
-              uid: redirectUser.uid,
-              email: redirectUser.email,
-              displayName: redirectUser.displayName,
-              photoURL: redirectUser.photoURL,
+            const syncResult = await apiRequest<{id: number}>("/api/users/sync", {
+              method: "POST",
+              body: JSON.stringify({
+                uid: redirectUser.uid,
+                email: redirectUser.email,
+                displayName: redirectUser.displayName,
+                photoURL: redirectUser.photoURL
+              })
             });
+            
+            // Add the database ID to the user object for components that need it
+            if (syncResult && syncResult.id) {
+              (redirectUser as any).id = syncResult.id;
+            }
             
             toast({
               title: "Signed in with Google",
@@ -86,12 +94,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         try {
           // When user logs in, sync with backend
-          await apiRequest("POST", "/api/users/sync", {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
+          const syncResult = await apiRequest<{id: number}>("/api/users/sync", {
+            method: "POST",
+            body: JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              photoURL: user.photoURL
+            })
           });
+          
+          // Add the database ID to the user object for components that need it
+          if (syncResult && syncResult.id) {
+            (user as any).id = syncResult.id;
+          }
         } catch (error) {
           console.error("Error syncing user with backend:", error);
         }
