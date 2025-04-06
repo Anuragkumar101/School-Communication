@@ -1,5 +1,15 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithRedirect, 
+  getRedirectResult,
+  signOut, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  updateProfile 
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
@@ -54,10 +64,27 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
+    // Use redirect method for mobile environments
+    await signInWithRedirect(auth, googleProvider);
+    // Note: The redirect result will be handled when the page reloads
+    return null;
   } catch (error) {
-    console.error("Error signing in with Google:", error);
+    console.error("Error initiating Google sign-in redirect:", error);
+    throw error;
+  }
+};
+
+// This function should be called when the app initializes to handle the redirect result
+export const handleRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    if (result) {
+      // User successfully signed in with redirect
+      return result.user;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error handling Google sign-in redirect result:", error);
     throw error;
   }
 };

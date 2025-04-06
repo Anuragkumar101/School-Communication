@@ -1,5 +1,12 @@
 import { createContext, useEffect, useState, ReactNode } from "react";
-import { auth, signInWithGoogle, logInWithEmailPassword, registerWithEmailPassword, logOut } from "@/lib/firebase";
+import { 
+  auth, 
+  signInWithGoogle, 
+  logInWithEmailPassword, 
+  registerWithEmailPassword, 
+  logOut, 
+  handleRedirectResult 
+} from "@/lib/firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -30,6 +37,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check for redirect result on initial load
+    const checkRedirectResult = async () => {
+      try {
+        const redirectUser = await handleRedirectResult();
+        if (redirectUser) {
+          // If we got a user from redirect, sync with backend
+          try {
+            await apiRequest("POST", "/api/users/sync", {
+              uid: redirectUser.uid,
+              email: redirectUser.email,
+              displayName: redirectUser.displayName,
+              photoURL: redirectUser.photoURL,
+            });
+            
+            toast({
+              title: "Signed in with Google",
+              description: "You have successfully signed in with Google",
+            });
+          } catch (error) {
+            console.error("Error syncing redirect user with backend:", error);
+          }
+        }
+      } catch (error) {
+        console.error("Error handling redirect result:", error);
+        toast({
+          title: "Sign in failed",
+          description: "Failed to complete Google sign-in",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    checkRedirectResult();
+    
+    // Regular auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
@@ -49,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signInWithEmailWrapper = async (email: string, password: string) => {
     try {
