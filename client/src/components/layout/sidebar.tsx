@@ -8,7 +8,8 @@ import {
   UserIcon, 
   SettingsIcon, 
   LogOutIcon,
-  ClipboardListIcon
+  ClipboardListIcon,
+  UsersIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,6 +37,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       title: "Chat",
       icon: <MessageSquareIcon className="h-5 w-5" />,
       href: "/chat",
+      section: "Collaborate"
+    },
+    {
+      title: "Conversations",
+      icon: <UsersIcon className="h-5 w-5" />,
+      href: "/conversations",
       section: "Collaborate"
     },
     {

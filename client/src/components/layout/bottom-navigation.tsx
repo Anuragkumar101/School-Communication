@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
-import { HomeIcon, MessageSquareIcon, CalendarIcon, ClipboardListIcon, BookOpenIcon } from "lucide-react";
+import { HomeIcon, MessageSquareIcon, CalendarIcon, ClipboardListIcon, BookOpenIcon, UsersIcon } from "lucide-react";
 
 const BottomNavigation = () => {
   const [location] = useLocation();
@@ -21,6 +21,11 @@ const BottomNavigation = () => {
       href: "/chat",
     },
     {
+      title: "Convs",
+      icon: <UsersIcon className="h-5 w-5" />,
+      href: "/conversations",
+    },
+    {
       title: "Homework",
       icon: <ClipboardListIcon className="h-5 w-5" />,
       href: "/homework",
@@ -29,11 +34,6 @@ const BottomNavigation = () => {
       title: "Timetable",
       icon: <CalendarIcon className="h-5 w-5" />,
       href: "/timetable",
-    },
-    {
-      title: "Learning",
-      icon: <BookOpenIcon className="h-5 w-5" />,
-      href: "/learning",
     },
   ];
 

@@ -12,7 +12,10 @@ import {
   insertQuizAttemptSchema,
   insertChallengeSchema,
   insertXpActivitySchema,
-  insertUserStreakSchema
+  insertUserStreakSchema,
+  insertConversationSchema,
+  insertConversationParticipantSchema,
+  insertMessageSchema
 } from "@shared/schema";
 
 // XP Points constants
@@ -677,6 +680,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending message to homework help bot:", error);
       res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // === Chat & Conversation Routes ===
+  
+  // Get user's conversations
+  app.get("/api/users/:userId/conversations", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const conversations = await storage.getConversations(userId);
+      
+      // For each conversation, get the participants
+      const conversationsWithParticipants = await Promise.all(
+        conversations.map(async (conversation) => {
+          const participants = await storage.getConversationParticipants(conversation.id);
+          return {
+            ...conversation,
+            participants
+          };
+        })
+      );
+      
+      res.json(conversationsWithParticipants);
+    } catch (error) {
+      console.error("Error fetching user conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+  
+  // Get a specific conversation
+  app.get("/api/conversations/:id", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getConversationById(conversationId);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      const participants = await storage.getConversationParticipants(conversationId);
+      
+      res.json({
+        ...conversation,
+        participants
+      });
+    } catch (error) {
+      console.error("Error fetching conversation:", error);
+      res.status(500).json({ message: "Failed to fetch conversation" });
+    }
+  });
+  
+  // Create a new conversation
+  app.post("/api/conversations", async (req, res) => {
+    try {
+      const { conversation, participants } = req.body;
+      
+      // Validate conversation data
+      const conversationData = insertConversationSchema.parse(conversation);
+      
+      // Create the conversation
+      const newConversation = await storage.createConversation(conversationData);
+      
+      // Add participants
+      const participantPromises = participants.map(async (userId: number) => {
+        return storage.addParticipantToConversation({
+          conversationId: newConversation.id,
+          userId,
+          isAdmin: userId === conversationData.createdBy
+        });
+      });
+      
+      const addedParticipants = await Promise.all(participantPromises);
+      
+      res.status(201).json({
+        ...newConversation,
+        participants: addedParticipants
+      });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create conversation" });
+    }
+  });
+  
+  // Add participant to conversation
+  app.post("/api/conversations/:conversationId/participants", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      const { userId, isAdmin = false } = req.body;
+      
+      // Check if conversation exists
+      const conversation = await storage.getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Add the participant
+      const participant = await storage.addParticipantToConversation({
+        conversationId,
+        userId,
+        isAdmin
+      });
+      
+      res.status(201).json(participant);
+    } catch (error) {
+      console.error("Error adding participant:", error);
+      res.status(500).json({ message: "Failed to add participant" });
+    }
+  });
+  
+  // Remove participant from conversation
+  app.delete("/api/conversations/:conversationId/participants/:userId", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      const userId = parseInt(req.params.userId);
+      
+      // Check if conversation exists
+      const conversation = await storage.getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Remove the participant
+      await storage.removeParticipantFromConversation(conversationId, userId);
+      
+      res.status(200).json({ message: "Participant removed successfully" });
+    } catch (error) {
+      console.error("Error removing participant:", error);
+      res.status(500).json({ message: "Failed to remove participant" });
+    }
+  });
+  
+  // Get messages from a conversation
+  app.get("/api/conversations/:conversationId/messages", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      // Check if conversation exists
+      const conversation = await storage.getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Get messages
+      const messages = await storage.getMessages(conversationId, limit);
+      
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+  
+  // Send a message to a conversation
+  app.post("/api/conversations/:conversationId/messages", async (req, res) => {
+    try {
+      const conversationId = parseInt(req.params.conversationId);
+      
+      // Check if conversation exists
+      const conversation = await storage.getConversationById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      
+      // Parse the message data
+      const messageData = insertMessageSchema.parse({
+        ...req.body,
+        conversationId
+      });
+      
+      // Create the message
+      const newMessage = await storage.createMessage(messageData);
+      
+      res.status(201).json(newMessage);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+  
+  // Mark a message as read
+  app.patch("/api/messages/:messageId/read", async (req, res) => {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+      
+      const updatedMessage = await storage.markMessageAsRead(messageId, userId);
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error marking message as read:", error);
+      res.status(500).json({ message: "Failed to mark message as read" });
     }
   });
 

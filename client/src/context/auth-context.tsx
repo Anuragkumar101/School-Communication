@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 interface AuthContextProps {
   currentUser: User | null;
   loading: boolean;
+  isAuthenticated: boolean;
   signInWithGoogle: () => Promise<User | null>;
   signInWithEmail: (email: string, password: string) => Promise<User | null>;
   signUp: (email: string, password: string, displayName: string) => Promise<User | null>;
@@ -16,6 +17,7 @@ interface AuthContextProps {
 export const AuthContext = createContext<AuthContextProps>({
   currentUser: null,
   loading: true,
+  isAuthenticated: false,
   signInWithGoogle: async () => null,
   signInWithEmail: async () => null,
   signUp: async () => null,
@@ -119,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value = {
     currentUser,
     loading,
+    isAuthenticated: !!currentUser,
     signInWithGoogle: signInWithGoogleWrapper,
     signInWithEmail: signInWithEmailWrapper,
     signUp: signUpWrapper,

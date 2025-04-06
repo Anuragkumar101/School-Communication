@@ -1,5 +1,8 @@
 import {
   users, type User, type InsertUser,
+  conversations, type Conversation, type InsertConversation,
+  conversationParticipants, type ConversationParticipant, type InsertConversationParticipant,
+  messages, type Message, type InsertMessage,
   quizzes, type Quiz, type InsertQuiz,
   quizQuestions, type QuizQuestion, type InsertQuizQuestion,
   flashcards, type Flashcard, type InsertFlashcard,
@@ -73,6 +76,22 @@ export interface IStorage {
   getXpActivities(userId: number, limit?: number): Promise<XpActivity[]>;
   addXpActivity(activity: InsertXpActivity): Promise<XpActivity>;
   getUsersWithTopXp(limit?: number): Promise<Array<{user: User, totalXp: number, level: number}>>;
+  
+  // Conversation methods
+  getConversations(userId: number): Promise<Conversation[]>;
+  getConversationById(id: number): Promise<Conversation | undefined>;
+  createConversation(conversation: InsertConversation): Promise<Conversation>;
+  updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation>;
+  
+  // Conversation Participant methods
+  getConversationParticipants(conversationId: number): Promise<ConversationParticipant[]>;
+  addParticipantToConversation(participant: InsertConversationParticipant): Promise<ConversationParticipant>;
+  removeParticipantFromConversation(conversationId: number, userId: number): Promise<void>;
+  
+  // Message methods
+  getMessages(conversationId: number, limit?: number): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageAsRead(messageId: number, userId: number): Promise<Message>;
 }
 
 // Import database and necessary operators from drizzle-orm
@@ -567,6 +586,155 @@ export class DatabaseStorage implements IStorage {
     }
     
     return result;
+  }
+
+  // Conversation methods
+  async getConversations(userId: number): Promise<Conversation[]> {
+    // Get all conversations where the user is a participant
+    const participations = await db
+      .select({
+        conversationId: conversationParticipants.conversationId
+      })
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.userId, userId));
+    
+    if (participations.length === 0) {
+      return [];
+    }
+    
+    // Get the conversation data
+    const conversationIds = participations.map(p => p.conversationId);
+    
+    // Using SQL IN operator to get all conversations
+    const results = await db
+      .select()
+      .from(conversations)
+      .where(
+        sql`${conversations.id} IN (${sql.join(conversationIds, sql`, `)})`
+      )
+      .orderBy(desc(conversations.updatedAt));
+    
+    return results;
+  }
+  
+  async getConversationById(id: number): Promise<Conversation | undefined> {
+    const [conversation] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id));
+    
+    return conversation;
+  }
+  
+  async createConversation(conversation: InsertConversation): Promise<Conversation> {
+    const [newConversation] = await db
+      .insert(conversations)
+      .values(conversation)
+      .returning();
+    
+    return newConversation;
+  }
+  
+  async updateConversation(id: number, data: Partial<Conversation>): Promise<Conversation> {
+    const [updatedConversation] = await db
+      .update(conversations)
+      .set(data)
+      .where(eq(conversations.id, id))
+      .returning();
+    
+    if (!updatedConversation) {
+      throw new Error(`Conversation with ID ${id} not found`);
+    }
+    
+    return updatedConversation;
+  }
+  
+  // Conversation Participant methods
+  async getConversationParticipants(conversationId: number): Promise<ConversationParticipant[]> {
+    return db
+      .select()
+      .from(conversationParticipants)
+      .where(eq(conversationParticipants.conversationId, conversationId));
+  }
+  
+  async addParticipantToConversation(participant: InsertConversationParticipant): Promise<ConversationParticipant> {
+    const [newParticipant] = await db
+      .insert(conversationParticipants)
+      .values(participant)
+      .returning();
+    
+    return newParticipant;
+  }
+  
+  async removeParticipantFromConversation(conversationId: number, userId: number): Promise<void> {
+    await db
+      .delete(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+  }
+  
+  // Message methods
+  async getMessages(conversationId: number, limit?: number): Promise<Message[]> {
+    const query = db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(messages.timestamp);
+    
+    if (limit) {
+      return query.limit(limit);
+    }
+    
+    return query;
+  }
+  
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [newMessage] = await db
+      .insert(messages)
+      .values({
+        ...message,
+        timestamp: new Date()
+      })
+      .returning();
+    
+    // Update conversation's updatedAt timestamp
+    await db
+      .update(conversations)
+      .set({ updatedAt: new Date() })
+      .where(eq(conversations.id, message.conversationId));
+    
+    return newMessage;
+  }
+  
+  async markMessageAsRead(messageId: number, userId: number): Promise<Message> {
+    // Get the current message
+    const [currentMessage] = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.id, messageId));
+    
+    if (!currentMessage) {
+      throw new Error(`Message with ID ${messageId} not found`);
+    }
+    
+    // Add the userId to the readBy array if not already there
+    const readBy: number[] = currentMessage.readBy as number[] || [];
+    if (!readBy.includes(userId)) {
+      readBy.push(userId);
+    }
+    
+    // Update the message
+    const [updatedMessage] = await db
+      .update(messages)
+      .set({ readBy })
+      .where(eq(messages.id, messageId))
+      .returning();
+    
+    return updatedMessage;
   }
 }
 

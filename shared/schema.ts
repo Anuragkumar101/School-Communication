@@ -23,17 +23,55 @@ export const insertUserSchema = createInsertSchema(users).pick({
   uid: true,
 });
 
+// Conversation model
+export const conversations = pgTable("conversations", {
+  id: serial("id").primaryKey(),
+  title: text("title"),
+  type: text("type").notNull().default("private"), // private, group, class, etc.
+  createdBy: integer("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).pick({
+  title: true,
+  type: true,
+  createdBy: true,
+});
+
+// Conversation Participants 
+export const conversationParticipants = pgTable("conversation_participants", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  isAdmin: boolean("is_admin").default(false),
+});
+
+export const insertConversationParticipantSchema = createInsertSchema(conversationParticipants).pick({
+  conversationId: true,
+  userId: true,
+  isAdmin: true,
+});
+
 // Message model
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
-  senderId: integer("sender_id").notNull(),
+  senderId: integer("sender_id").notNull().references(() => users.id),
   timestamp: timestamp("timestamp").defaultNow(),
+  readBy: jsonb("read_by").default([]), // Array of user IDs who have read the message
+  messageType: text("message_type").default("text"), // text, image, file, etc.
+  attachmentUrl: text("attachment_url"),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).pick({
+  conversationId: true,
   content: true,
   senderId: true,
+  messageType: true,
+  attachmentUrl: true,
 });
 
 // Task (Homework) model
@@ -76,6 +114,12 @@ export const insertTimetableEntrySchema = createInsertSchema(timetableEntries).p
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
+export type InsertConversationParticipant = z.infer<typeof insertConversationParticipantSchema>;
+export type ConversationParticipant = typeof conversationParticipants.$inferSelect;
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
