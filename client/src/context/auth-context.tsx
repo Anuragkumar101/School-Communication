@@ -39,9 +39,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Check for redirect result on initial load
     const checkRedirectResult = async () => {
+      console.log("Checking for redirect result...");
       try {
         const redirectUser = await handleRedirectResult();
         if (redirectUser) {
+          console.log("Got user from redirect:", redirectUser);
           // If we got a user from redirect, sync with backend
           try {
             await apiRequest("POST", "/api/users/sync", {
@@ -57,13 +59,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
           } catch (error) {
             console.error("Error syncing redirect user with backend:", error);
+            toast({
+              title: "Account created but sync failed",
+              description: "Your account was created, but we couldn't sync with our servers. Please try logging in again.",
+              variant: "destructive",
+            });
           }
+        } else {
+          console.log("No redirect user found");
         }
       } catch (error) {
         console.error("Error handling redirect result:", error);
         toast({
           title: "Sign in failed",
-          description: "Failed to complete Google sign-in",
+          description: "Failed to complete Google sign-in. Please try email/password instead.",
           variant: "destructive",
         });
       }

@@ -64,12 +64,22 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
   try {
-    // Use redirect method for mobile environments
-    await signInWithRedirect(auth, googleProvider);
-    // Note: The redirect result will be handled when the page reloads
-    return null;
-  } catch (error) {
-    console.error("Error initiating Google sign-in redirect:", error);
+    // First try popup for compatibility with more environments
+    try {
+      console.log("Attempting Google sign-in with popup...");
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("Popup sign-in successful");
+      return result.user;
+    } catch (popupError: any) {
+      console.log("Popup sign-in failed, trying redirect:", popupError?.message || popupError);
+      
+      // Fall back to redirect method for mobile environments
+      await signInWithRedirect(auth, googleProvider);
+      // Note: The redirect result will be handled when the page reloads
+      return null;
+    }
+  } catch (error: any) {
+    console.error("Error initiating Google sign-in:", error);
     throw error;
   }
 };
@@ -80,11 +90,20 @@ export const handleRedirectResult = async () => {
     const result = await getRedirectResult(auth);
     if (result) {
       // User successfully signed in with redirect
+      console.log("Successfully signed in with Google redirect:", result.user);
       return result.user;
     }
+    console.log("No redirect result found");
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error handling Google sign-in redirect result:", error);
+    // Log detailed error info to help with debugging
+    if (error.code) {
+      console.error("Error code:", error.code);
+    }
+    if (error.message) {
+      console.error("Error message:", error.message);
+    }
     throw error;
   }
 };
@@ -94,7 +113,7 @@ export const registerWithEmailPassword = async (email: string, password: string,
     const result = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(result.user, { displayName });
     return result.user;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error signing up with email/password:", error);
     throw error;
   }
@@ -104,7 +123,7 @@ export const logInWithEmailPassword = async (email: string, password: string) =>
   try {
     const result = await signInWithEmailAndPassword(auth, email, password);
     return result.user;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error signing in with email/password:", error);
     throw error;
   }
@@ -113,7 +132,7 @@ export const logInWithEmailPassword = async (email: string, password: string) =>
 export const logOut = async () => {
   try {
     await signOut(auth);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error signing out:", error);
     throw error;
   }
@@ -146,7 +165,7 @@ export const requestNotificationPermission = async () => {
       }
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.warn("Error requesting notification permission:", error);
     return null;
   }
