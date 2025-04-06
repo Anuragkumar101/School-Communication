@@ -18,7 +18,8 @@ import {
   Award,
   Map,
   Timer,
-  Brain
+  Brain,
+  Bot
 } from "lucide-react";
 
 export default function LearningPage() {
@@ -144,6 +145,23 @@ export default function LearningPage() {
                 <CardContent>
                   <Link href="/learning/challenges">
                     <Button className="w-full">View Challenges</Button>
+                  </Link>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-md transition-shadow bg-gradient-to-br from-primary/10 via-transparent to-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-primary" />
+                    AI Tutor
+                  </CardTitle>
+                  <CardDescription>
+                    Get personalized learning help with our smart AI tutor
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/learning/ai-tutor">
+                    <Button className="w-full" variant="default">Try AI Tutor</Button>
                   </Link>
                 </CardContent>
               </Card>

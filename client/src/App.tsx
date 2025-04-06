@@ -21,6 +21,7 @@ import AchievementsPage from "@/pages/learning/achievements";
 import JourneyMapPage from "@/pages/learning/journey-map";
 import StudyTimerPage from "@/pages/learning/study-timer";
 import RecommendationsPage from "@/pages/learning/recommendations";
+import AITutorPage from "@/pages/learning/ai-tutor";
 import ConversationsPage from "@/pages/conversations";
 import ConversationDetailPage from "@/pages/conversations/[id]";
 import NewConversationPage from "@/pages/conversations/new";
@@ -50,6 +51,7 @@ function Router() {
         <Route path="/learning/journey-map" component={JourneyMapPage} />
         <Route path="/learning/study-timer" component={StudyTimerPage} />
         <Route path="/learning/recommendations" component={RecommendationsPage} />
+        <Route path="/learning/ai-tutor" component={AITutorPage} />
         
         {/* Conversation Routes */}
         <Route path="/conversations" component={ConversationsPage} />

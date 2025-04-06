@@ -13,7 +13,9 @@ import {
   homeworkHelp, type HomeworkHelp, type InsertHomeworkHelp,
   homeworkHelpMessages, type HomeworkHelpMessage, type InsertHomeworkHelpMessage,
   userStreaks, type UserStreak, type InsertUserStreak,
-  xpActivities, type XpActivity, type InsertXpActivity
+  xpActivities, type XpActivity, type InsertXpActivity,
+  userLearningProfiles, type UserLearningProfile, type InsertUserLearningProfile,
+  aiInteractions, type AiInteraction, type InsertAiInteraction
 } from "@shared/schema";
 
 // modify the interface with any CRUD methods
@@ -92,6 +94,14 @@ export interface IStorage {
   getMessages(conversationId: number, limit?: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(messageId: number, userId: number): Promise<Message>;
+  
+  // Personalized AI methods
+  getUserLearningProfile(userId: number): Promise<UserLearningProfile | undefined>;
+  createUserLearningProfile(profile: InsertUserLearningProfile): Promise<UserLearningProfile>;
+  updateUserLearningProfile(userId: number, data: Partial<UserLearningProfile>): Promise<UserLearningProfile>;
+  recordAiInteraction(interaction: InsertAiInteraction): Promise<AiInteraction>;
+  getUserAiInteractions(userId: number, limit?: number): Promise<AiInteraction[]>;
+  updateUserMistake(userId: number, mistake: {subject: string, topic: string, details: string}): Promise<UserLearningProfile>;
 }
 
 // Import database and necessary operators from drizzle-orm
@@ -735,6 +745,112 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedMessage;
+  }
+  
+  // Personalized AI methods
+  async getUserLearningProfile(userId: number): Promise<UserLearningProfile | undefined> {
+    const [profile] = await db
+      .select()
+      .from(userLearningProfiles)
+      .where(eq(userLearningProfiles.userId, userId));
+    
+    return profile;
+  }
+  
+  async createUserLearningProfile(profile: InsertUserLearningProfile): Promise<UserLearningProfile> {
+    const [newProfile] = await db
+      .insert(userLearningProfiles)
+      .values({
+        ...profile,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    
+    return newProfile;
+  }
+  
+  async updateUserLearningProfile(userId: number, data: Partial<UserLearningProfile>): Promise<UserLearningProfile> {
+    // Check if profile exists
+    const existingProfile = await this.getUserLearningProfile(userId);
+    
+    if (!existingProfile) {
+      // Create a new profile if none exists
+      return this.createUserLearningProfile({
+        userId,
+        learningStyle: data.learningStyle,
+        strengths: data.strengths as string[],
+        weaknesses: data.weaknesses as string[],
+        interests: data.interests as string[],
+        recentMistakes: data.recentMistakes as Array<{subject: string, topic: string, details: string}>,
+      });
+    }
+    
+    // Update existing profile
+    const [updatedProfile] = await db
+      .update(userLearningProfiles)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(userLearningProfiles.userId, userId))
+      .returning();
+    
+    return updatedProfile;
+  }
+  
+  async recordAiInteraction(interaction: InsertAiInteraction): Promise<AiInteraction> {
+    const [newInteraction] = await db
+      .insert(aiInteractions)
+      .values({
+        ...interaction,
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return newInteraction;
+  }
+  
+  async getUserAiInteractions(userId: number, limit?: number): Promise<AiInteraction[]> {
+    const query = db
+      .select()
+      .from(aiInteractions)
+      .where(eq(aiInteractions.userId, userId))
+      .orderBy(desc(aiInteractions.createdAt));
+    
+    if (limit) {
+      return query.limit(limit);
+    }
+    
+    return query;
+  }
+  
+  async updateUserMistake(userId: number, mistake: {subject: string, topic: string, details: string}): Promise<UserLearningProfile> {
+    // Get the user's learning profile
+    const profile = await this.getUserLearningProfile(userId);
+    
+    if (!profile) {
+      // Create a new profile with this mistake
+      return this.createUserLearningProfile({
+        userId,
+        recentMistakes: [mistake],
+      });
+    }
+    
+    // Add the new mistake to the existing profile's mistakes
+    const recentMistakes = [...(profile.recentMistakes as any[] || [])];
+    
+    // Keep only the 10 most recent mistakes (including the new one)
+    if (recentMistakes.length >= 10) {
+      recentMistakes.shift(); // Remove the oldest mistake
+    }
+    
+    recentMistakes.push(mistake); // Add the new mistake
+    
+    // Update the user's learning profile
+    return this.updateUserLearningProfile(userId, {
+      recentMistakes: recentMistakes as any,
+    });
   }
 }
 

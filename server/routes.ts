@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { AILearningService } from "./ai-learning-service";
 import { 
   insertUserSchema, 
   insertQuizSchema, 
@@ -15,7 +16,9 @@ import {
   insertUserStreakSchema,
   insertConversationSchema,
   insertConversationParticipantSchema,
-  insertMessageSchema
+  insertMessageSchema,
+  insertUserLearningProfileSchema,
+  insertAiInteractionSchema
 } from "@shared/schema";
 
 // XP Points constants
@@ -27,7 +30,8 @@ export const XP_ACTIONS = {
   MAINTAIN_STREAK_WEEK: 70,
   COMPLETE_CHALLENGE: 75,
   WATCH_VIDEO: 20,
-  USE_FLASHCARDS: 25
+  USE_FLASHCARDS: 25,
+  USE_AI_TUTOR: 5
 };
 
 // Helper service for the Homework Help Bot
@@ -882,6 +886,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error marking message as read:", error);
       res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  // === Personalized AI Learning Routes ===
+  
+  // Get AI response to a question
+  app.post("/api/ai/ask", async (req, res) => {
+    try {
+      const { userId, query, category, subject } = req.body;
+      
+      if (!userId || !query) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      const response = await AILearningService.getPersonalizedResponse(
+        parseInt(userId), 
+        query,
+        category,
+        subject
+      );
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error("Error getting AI response:", error);
+      res.status(500).json({ message: error.message || "Failed to get AI response" });
+    }
+  });
+  
+  // Record user mistake for improved personalization
+  app.post("/api/ai/record-mistake", async (req, res) => {
+    try {
+      const { userId, subject, topic, details } = req.body;
+      
+      if (!userId || !subject || !topic || !details) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      await AILearningService.recordUserMistake(
+        parseInt(userId),
+        subject,
+        topic,
+        details
+      );
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error recording mistake:", error);
+      res.status(500).json({ message: error.message || "Failed to record mistake" });
+    }
+  });
+  
+  // Update user learning profile
+  app.post("/api/ai/learning-profile", async (req, res) => {
+    try {
+      const { userId, learningStyle, strengths, weaknesses, interests } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      // Check if the profile exists first
+      const existingProfile = await storage.getUserLearningProfile(parseInt(userId));
+      
+      if (!existingProfile) {
+        // Create a new profile
+        await storage.createUserLearningProfile({
+          userId: parseInt(userId),
+          learningStyle: learningStyle || null,
+          strengths: strengths || [],
+          weaknesses: weaknesses || [],
+          interests: interests || [],
+          recentMistakes: []
+        });
+      } else {
+        // Update existing profile
+        await AILearningService.updateLearningProfile(
+          parseInt(userId),
+          {
+            learningStyle,
+            strengths,
+            weaknesses,
+            interests
+          }
+        );
+      }
+      
+      // Get the updated profile
+      const updatedProfile = await storage.getUserLearningProfile(parseInt(userId));
+      
+      res.json(updatedProfile);
+    } catch (error: any) {
+      console.error("Error updating learning profile:", error);
+      res.status(500).json({ message: error.message || "Failed to update learning profile" });
+    }
+  });
+  
+  // Get user learning profile
+  app.get("/api/ai/learning-profile/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      const profile = await storage.getUserLearningProfile(userId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Learning profile not found" });
+      }
+      
+      res.json(profile);
+    } catch (error: any) {
+      console.error("Error fetching learning profile:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch learning profile" });
+    }
+  });
+  
+  // Record feedback on AI interaction
+  app.post("/api/ai/feedback", async (req, res) => {
+    try {
+      const { userId, interactionId, helpfulnessRating } = req.body;
+      
+      if (!userId || !interactionId || helpfulnessRating === undefined) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      await AILearningService.recordFeedback(
+        parseInt(userId),
+        parseInt(interactionId),
+        parseInt(helpfulnessRating)
+      );
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error recording feedback:", error);
+      res.status(500).json({ message: error.message || "Failed to record feedback" });
     }
   });
 

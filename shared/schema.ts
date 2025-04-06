@@ -359,3 +359,51 @@ export type UserStreak = typeof userStreaks.$inferSelect;
 
 export type InsertXpActivity = z.infer<typeof insertXpActivitySchema>;
 export type XpActivity = typeof xpActivities.$inferSelect;
+
+// Personalized AI Learning System
+export const userLearningProfiles = pgTable("user_learning_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  learningStyle: text("learning_style"), // visual, auditory, reading/writing, kinesthetic
+  strengths: jsonb("strengths").default([]), // Array of subjects/topics user is strong in
+  weaknesses: jsonb("weaknesses").default([]), // Array of subjects/topics user needs help with
+  interests: jsonb("interests").default([]), // User's learning interests
+  recentMistakes: jsonb("recent_mistakes").default([]), // Array of recent mistakes for focused learning
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserLearningProfileSchema = createInsertSchema(userLearningProfiles).pick({
+  userId: true,
+  learningStyle: true,
+  strengths: true,
+  weaknesses: true,
+  interests: true,
+  recentMistakes: true,
+});
+
+export const aiInteractions = pgTable("ai_interactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  query: text("query").notNull(), // User's question/prompt
+  response: text("response").notNull(), // AI's response
+  category: text("category"), // homework, exam_prep, general_learning, quiz_help
+  relatedSubject: text("related_subject"), // math, science, english, etc.
+  helpfulnessRating: integer("helpfulness_rating"), // User feedback (1-5)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAiInteractionSchema = createInsertSchema(aiInteractions).pick({
+  userId: true,
+  query: true,
+  response: true,
+  category: true,
+  relatedSubject: true,
+  helpfulnessRating: true,
+});
+
+export type InsertUserLearningProfile = z.infer<typeof insertUserLearningProfileSchema>;
+export type UserLearningProfile = typeof userLearningProfiles.$inferSelect;
+
+export type InsertAiInteraction = z.infer<typeof insertAiInteractionSchema>;
+export type AiInteraction = typeof aiInteractions.$inferSelect;
