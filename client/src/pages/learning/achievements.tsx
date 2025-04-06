@@ -5,7 +5,8 @@ import MainLayout from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Trophy, Award, Filter } from "lucide-react";
+import { Search, Trophy, Award, Filter, CircleDashed } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import AchievementCard from "@/components/learning/achievement-card";
 import { useAuth } from "@/hooks/use-auth";
 
