@@ -2,7 +2,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.schoolconnect.app',
-  appName: 'SchoolConnect',
+  appName: 'LOYAL COMMUNITY',
   webDir: 'dist',
   server: {
     androidScheme: 'https'
@@ -19,6 +19,13 @@ const config: CapacitorConfig = {
       spinnerColor: "#6366f1",
       splashFullScreen: true,
       splashImmersive: true
+    },
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ["google.com", "password"]
+    },
+    FirebaseMessaging: {
+      presentationOptions: ["badge", "sound", "alert"],
     }
   }
 };
