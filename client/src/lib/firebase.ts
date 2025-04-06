@@ -31,10 +31,21 @@ export { analytics };
 
 // Initialize Messaging for push notifications
 let messaging: any = null;
-try {
-  messaging = getMessaging(app);
-} catch (error) {
-  console.error("Firebase messaging is not supported in this browser", error);
+// Only try to initialize messaging if we're in a browser that likely supports it
+// and we're not in a Replit webview
+const isSupportedBrowser = typeof window !== 'undefined' && 
+                          'serviceWorker' in navigator && 
+                          window.location.hostname !== 'replit.com' &&
+                          !window.location.hostname.includes('.replit.dev');
+
+if (isSupportedBrowser) {
+  try {
+    messaging = getMessaging(app);
+  } catch (error) {
+    console.warn("Firebase messaging is not supported in this browser", error);
+  }
+} else {
+  console.log("Firebase messaging initialization skipped - unsupported environment");
 }
 
 // Authentication functions
@@ -82,19 +93,33 @@ export const logOut = async () => {
 
 // Push notification permission request
 export const requestNotificationPermission = async () => {
-  if (!messaging) return null;
+  if (!messaging) {
+    console.log("Push notifications are not supported in this environment");
+    return null;
+  }
   
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      const token = await getToken(messaging, {
-        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-      });
-      return token;
+      // Only try to get token if we have a VAPID key
+      if (import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+        try {
+          const token = await getToken(messaging, {
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+          });
+          return token;
+        } catch (tokenError) {
+          console.warn("Could not get notification token:", tokenError);
+          return null;
+        }
+      } else {
+        console.log("VAPID key not provided - push notifications disabled");
+        return null;
+      }
     }
     return null;
   } catch (error) {
-    console.error("Error requesting notification permission:", error);
+    console.warn("Error requesting notification permission:", error);
     return null;
   }
 };
