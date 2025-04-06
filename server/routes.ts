@@ -10,8 +10,22 @@ import {
   insertDailyFactSchema,
   insertLearningVideoSchema,
   insertQuizAttemptSchema,
-  insertChallengeSchema 
+  insertChallengeSchema,
+  insertXpActivitySchema,
+  insertUserStreakSchema
 } from "@shared/schema";
+
+// XP Points constants
+export const XP_ACTIONS = {
+  DAILY_LOGIN: 10,
+  COMPLETE_QUIZ: 50,
+  PERFECT_QUIZ_SCORE: 100,
+  HOMEWORK_HELP_QUESTION: 15,
+  MAINTAIN_STREAK_WEEK: 70,
+  COMPLETE_CHALLENGE: 75,
+  WATCH_VIDEO: 20,
+  USE_FLASHCARDS: 25
+};
 
 // Helper service for the Homework Help Bot
 class HomeworkHelpService {
@@ -46,6 +60,88 @@ class HomeworkHelpService {
     
     // Generic response for other prompts
     return "I understand you're asking about '" + prompt + "'. To give you the best help, could you provide more specific details about what you're studying or the particular question you have?";
+  }
+}
+
+// Helper service for Streaks and XP System
+class StreakService {
+  static async handleDailyLogin(userId: number): Promise<{
+    streak: number, 
+    longestStreak: number, 
+    xpEarned: number, 
+    level: number,
+    levelUp: boolean
+  }> {
+    // Check and update the user's streak
+    const updatedStreak = await storage.checkAndUpdateDailyStreak(userId);
+    
+    // Award XP for daily login
+    const oldLevel = updatedStreak.level;
+    const activity = await storage.addXpActivity({
+      userId,
+      activity: 'daily_login',
+      description: 'Logged in today',
+      xpEarned: XP_ACTIONS.DAILY_LOGIN
+    });
+    
+    // Get the updated streak info after XP has been added
+    const finalStreak = await storage.getUserStreak(userId);
+    
+    if (!finalStreak) {
+      throw new Error('Failed to retrieve updated streak information');
+    }
+    
+    // Check if user leveled up
+    const levelUp = finalStreak.level > oldLevel;
+    
+    return {
+      streak: finalStreak.currentStreak,
+      longestStreak: finalStreak.longestStreak,
+      xpEarned: XP_ACTIONS.DAILY_LOGIN,
+      level: finalStreak.level,
+      levelUp
+    };
+  }
+  
+  static async awardXpForAction(
+    userId: number, 
+    action: string, 
+    description: string, 
+    xpAmount: number
+  ): Promise<{
+    xpEarned: number,
+    totalXp: number,
+    level: number,
+    levelUp: boolean
+  }> {
+    // Get current level
+    const streakBefore = await storage.getUserStreak(userId);
+    const oldLevel = streakBefore?.level || 0;
+    
+    // Add the XP activity
+    await storage.addXpActivity({
+      userId,
+      activity: action,
+      description,
+      xpEarned: xpAmount
+    });
+    
+    // Get updated streak/XP info
+    const updatedStreak = await storage.getUserStreak(userId);
+    
+    if (!updatedStreak) {
+      throw new Error('Failed to retrieve updated streak information');
+    }
+    
+    // Check if level up occurred
+    const levelUp = updatedStreak.level > oldLevel;
+    
+    return {
+      xpEarned: xpAmount,
+      totalXp: updatedStreak.totalXp,
+      level: updatedStreak.level,
+      levelUp
+    };
   }
 }
 
@@ -293,7 +389,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attemptData = insertQuizAttemptSchema.parse(req.body);
       const newAttempt = await storage.createQuizAttempt(attemptData);
-      res.status(201).json(newAttempt);
+      
+      // Award XP based on quiz completion
+      let xpAmount = XP_ACTIONS.COMPLETE_QUIZ;
+      let description = `Completed a quiz and scored ${newAttempt.score}%`;
+      
+      // Award bonus XP for perfect scores
+      if (newAttempt.score === 100) {
+        xpAmount = XP_ACTIONS.PERFECT_QUIZ_SCORE;
+        description = `Achieved a perfect score on a quiz!`;
+      }
+      
+      // Award the XP
+      const xpResult = await StreakService.awardXpForAction(
+        newAttempt.userId,
+        'quiz_completion',
+        description,
+        xpAmount
+      );
+      
+      // Return both the attempt and XP info
+      res.status(201).json({
+        attempt: newAttempt,
+        xp: xpResult
+      });
     } catch (error) {
       console.error("Error submitting quiz attempt:", error);
       if (error instanceof z.ZodError) {
@@ -375,6 +494,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============ Streaks & XP API Routes ============
+  // Get user's streak and XP information
+  app.get("/api/users/:userId/streak", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const streak = await storage.getUserStreak(userId);
+      
+      if (!streak) {
+        // If no streak exists, create a new one
+        const newStreak = await storage.createUserStreak({
+          userId,
+          currentStreak: 0,
+          longestStreak: 0,
+          lastActivity: new Date(),
+          totalXp: 0,
+          level: 1
+        });
+        
+        return res.json(newStreak);
+      }
+      
+      res.json(streak);
+    } catch (error) {
+      console.error("Error fetching user streak:", error);
+      res.status(500).json({ message: "Failed to fetch streak information" });
+    }
+  });
+  
+  // Record user login (check and update streak)
+  app.post("/api/users/:userId/login", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const streakInfo = await StreakService.handleDailyLogin(userId);
+      res.json(streakInfo);
+    } catch (error) {
+      console.error("Error recording user login:", error);
+      res.status(500).json({ message: "Failed to record login" });
+    }
+  });
+  
+  // Award XP to a user for completing actions
+  app.post("/api/users/:userId/xp", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { action, description, xpAmount } = req.body;
+      
+      if (!action || !description || typeof xpAmount !== 'number') {
+        return res.status(400).json({ message: "Action, description, and XP amount are required" });
+      }
+      
+      const xpInfo = await StreakService.awardXpForAction(userId, action, description, xpAmount);
+      res.json(xpInfo);
+    } catch (error) {
+      console.error("Error awarding XP:", error);
+      res.status(500).json({ message: "Failed to award XP" });
+    }
+  });
+  
+  // Get user's XP activity history
+  app.get("/api/users/:userId/xp-activities", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const activities = await storage.getXpActivities(userId, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching XP activities:", error);
+      res.status(500).json({ message: "Failed to fetch XP activities" });
+    }
+  });
+  
+  // Get XP leaderboard
+  app.get("/api/xp-leaderboard", async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const leaderboard = await storage.getUsersWithTopXp(limit);
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching XP leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch XP leaderboard" });
+    }
+  });
+
   // ============ Homework Help API Routes ============
   // Get user's homework help conversations
   app.get("/api/homework-help/:userId", async (req, res) => {
@@ -432,6 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const conversationId = parseInt(req.params.conversationId);
       const { content, userId } = req.body;
+      const parsedUserId = parseInt(userId);
       
       if (!content) {
         return res.status(400).json({ message: "Message content is required" });
@@ -445,7 +648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Generate AI response
-      const aiResponse = await HomeworkHelpService.generateAIResponse(content, parseInt(userId));
+      const aiResponse = await HomeworkHelpService.generateAIResponse(content, parsedUserId);
       
       // Create AI message
       const aiMessage = await storage.createHomeworkHelpMessage({
@@ -454,9 +657,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isFromAI: true
       });
       
+      // Award XP for using the homework help feature
+      // We'll only award XP for substantial questions (longer than 20 characters)
+      let xpResult = null;
+      if (content.length > 20) {
+        xpResult = await StreakService.awardXpForAction(
+          parsedUserId,
+          'homework_help',
+          'Asked a question to the homework help bot',
+          XP_ACTIONS.HOMEWORK_HELP_QUESTION
+        );
+      }
+      
       res.json({
         userMessage,
-        aiMessage
+        aiMessage,
+        xp: xpResult
       });
     } catch (error) {
       console.error("Error sending message to homework help bot:", error);

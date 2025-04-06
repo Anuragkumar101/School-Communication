@@ -272,3 +272,46 @@ export type HomeworkHelp = typeof homeworkHelp.$inferSelect;
 
 export type InsertHomeworkHelpMessage = z.infer<typeof insertHomeworkHelpMessageSchema>;
 export type HomeworkHelpMessage = typeof homeworkHelpMessages.$inferSelect;
+
+// Streaks and XP system
+export const userStreaks = pgTable("user_streaks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastActivity: timestamp("last_activity").defaultNow().notNull(),
+  totalXp: integer("total_xp").notNull().default(0),
+  level: integer("level").notNull().default(1),
+});
+
+export const insertUserStreakSchema = createInsertSchema(userStreaks).pick({
+  userId: true,
+  currentStreak: true,
+  longestStreak: true,
+  lastActivity: true,
+  totalXp: true,
+  level: true,
+});
+
+// XP Activities
+export const xpActivities = pgTable("xp_activities", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  activity: text("activity").notNull(),
+  description: text("description"),
+  xpEarned: integer("xp_earned").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertXpActivitySchema = createInsertSchema(xpActivities).pick({
+  userId: true,
+  activity: true,
+  description: true,
+  xpEarned: true,
+});
+
+export type InsertUserStreak = z.infer<typeof insertUserStreakSchema>;
+export type UserStreak = typeof userStreaks.$inferSelect;
+
+export type InsertXpActivity = z.infer<typeof insertXpActivitySchema>;
+export type XpActivity = typeof xpActivities.$inferSelect;

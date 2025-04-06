@@ -8,7 +8,9 @@ import {
   quizAttempts, type QuizAttempt, type InsertQuizAttempt,
   challenges, type Challenge, type InsertChallenge,
   homeworkHelp, type HomeworkHelp, type InsertHomeworkHelp,
-  homeworkHelpMessages, type HomeworkHelpMessage, type InsertHomeworkHelpMessage
+  homeworkHelpMessages, type HomeworkHelpMessage, type InsertHomeworkHelpMessage,
+  userStreaks, type UserStreak, type InsertUserStreak,
+  xpActivities, type XpActivity, type InsertXpActivity
 } from "@shared/schema";
 
 // modify the interface with any CRUD methods
@@ -60,6 +62,17 @@ export interface IStorage {
   // Homework Help Message methods
   getHomeworkHelpMessages(conversationId: number): Promise<HomeworkHelpMessage[]>;
   createHomeworkHelpMessage(message: InsertHomeworkHelpMessage): Promise<HomeworkHelpMessage>;
+  
+  // Streak and XP methods
+  getUserStreak(userId: number): Promise<UserStreak | undefined>;
+  createUserStreak(streak: InsertUserStreak): Promise<UserStreak>;
+  updateUserStreak(userId: number, data: Partial<UserStreak>): Promise<UserStreak>;
+  checkAndUpdateDailyStreak(userId: number): Promise<UserStreak>;
+  
+  // XP Activity methods
+  getXpActivities(userId: number, limit?: number): Promise<XpActivity[]>;
+  addXpActivity(activity: InsertXpActivity): Promise<XpActivity>;
+  getUsersWithTopXp(limit?: number): Promise<Array<{user: User, totalXp: number, level: number}>>;
 }
 
 // Import database and necessary operators from drizzle-orm
@@ -371,6 +384,189 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedChallenge;
+  }
+
+  // User Streak methods
+  async getUserStreak(userId: number): Promise<UserStreak | undefined> {
+    const [streak] = await db
+      .select()
+      .from(userStreaks)
+      .where(eq(userStreaks.userId, userId));
+    
+    return streak;
+  }
+
+  async createUserStreak(streak: InsertUserStreak): Promise<UserStreak> {
+    const [newStreak] = await db
+      .insert(userStreaks)
+      .values(streak)
+      .returning();
+    
+    return newStreak;
+  }
+
+  async updateUserStreak(userId: number, data: Partial<UserStreak>): Promise<UserStreak> {
+    // First check if the streak exists
+    const existingStreak = await this.getUserStreak(userId);
+    
+    if (!existingStreak) {
+      // If no streak exists, create a new one with the provided data
+      return this.createUserStreak({
+        userId,
+        currentStreak: data.currentStreak ?? 0,
+        longestStreak: data.longestStreak ?? 0,
+        lastActivity: data.lastActivity ?? new Date(),
+        totalXp: data.totalXp ?? 0,
+        level: data.level ?? 1
+      });
+    }
+    
+    // Otherwise update the existing streak
+    const [updatedStreak] = await db
+      .update(userStreaks)
+      .set(data)
+      .where(eq(userStreaks.userId, userId))
+      .returning();
+    
+    return updatedStreak;
+  }
+
+  async checkAndUpdateDailyStreak(userId: number): Promise<UserStreak> {
+    const userStreak = await this.getUserStreak(userId);
+    
+    if (!userStreak) {
+      // If user doesn't have a streak yet, create one
+      return this.createUserStreak({
+        userId,
+        currentStreak: 1,
+        longestStreak: 1,
+        lastActivity: new Date(),
+        totalXp: 0,
+        level: 1
+      });
+    }
+    
+    const now = new Date();
+    const lastActivity = new Date(userStreak.lastActivity);
+    
+    // Check if the last activity was yesterday (within 48 hours but not today)
+    const isYesterday = (
+      now.getTime() - lastActivity.getTime() < 48 * 60 * 60 * 1000 &&
+      now.getDate() !== lastActivity.getDate()
+    );
+    
+    // Check if the last activity was today
+    const isToday = (
+      now.getDate() === lastActivity.getDate() &&
+      now.getMonth() === lastActivity.getMonth() &&
+      now.getFullYear() === lastActivity.getFullYear()
+    );
+    
+    if (isYesterday) {
+      // Increment streak if last activity was yesterday
+      const currentStreak = userStreak.currentStreak + 1;
+      const longestStreak = Math.max(currentStreak, userStreak.longestStreak);
+      
+      return this.updateUserStreak(userId, {
+        currentStreak,
+        longestStreak,
+        lastActivity: now
+      });
+    } else if (isToday) {
+      // Just update the last activity time if already logged in today
+      return this.updateUserStreak(userId, {
+        lastActivity: now
+      });
+    } else {
+      // Reset streak if more than a day has been missed
+      return this.updateUserStreak(userId, {
+        currentStreak: 1,
+        lastActivity: now
+      });
+    }
+  }
+
+  // XP Activity methods
+  async getXpActivities(userId: number, limit?: number): Promise<XpActivity[]> {
+    const baseQuery = db
+      .select()
+      .from(xpActivities)
+      .where(eq(xpActivities.userId, userId))
+      .orderBy(desc(xpActivities.createdAt));
+    
+    if (limit) {
+      return baseQuery.limit(limit);
+    }
+    
+    return baseQuery;
+  }
+
+  async addXpActivity(activity: InsertXpActivity): Promise<XpActivity> {
+    const [newActivity] = await db
+      .insert(xpActivities)
+      .values(activity)
+      .returning();
+    
+    // Update user's total XP and level
+    const userStreak = await this.getUserStreak(activity.userId);
+    
+    if (userStreak) {
+      // Calculate new total XP
+      const newTotalXp = userStreak.totalXp + activity.xpEarned;
+      
+      // Calculate new level (simple formula: level = 1 + floor(totalXp / 1000))
+      const newLevel = 1 + Math.floor(newTotalXp / 1000);
+      
+      // Update user streak with new XP and level
+      if (newLevel > userStreak.level) {
+        // Level up!
+        await this.updateUserStreak(activity.userId, {
+          totalXp: newTotalXp,
+          level: newLevel
+        });
+      } else {
+        // Just update XP
+        await this.updateUserStreak(activity.userId, {
+          totalXp: newTotalXp
+        });
+      }
+    } else {
+      // If user doesn't have streak record, create one
+      const level = 1 + Math.floor(activity.xpEarned / 1000);
+      await this.createUserStreak({
+        userId: activity.userId,
+        currentStreak: 1,
+        longestStreak: 1,
+        lastActivity: new Date(),
+        totalXp: activity.xpEarned,
+        level
+      });
+    }
+    
+    return newActivity;
+  }
+
+  async getUsersWithTopXp(limit: number = 10): Promise<Array<{user: User, totalXp: number, level: number}>> {
+    const topUsers = await db
+      .select()
+      .from(userStreaks)
+      .orderBy(desc(userStreaks.totalXp))
+      .limit(limit);
+    
+    const result: Array<{user: User, totalXp: number, level: number}> = [];
+    
+    for (const streakRecord of topUsers) {
+      const user = await this.getUser(streakRecord.userId);
+      if (user) {
+        result.push({
+          user,
+          totalXp: streakRecord.totalXp,
+          level: streakRecord.level
+        });
+      }
+    }
+    
+    return result;
   }
 }
 
