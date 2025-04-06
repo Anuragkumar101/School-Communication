@@ -110,7 +110,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <ul className="space-y-1">
                 {items.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href}>
+                    <Link 
+                      href={item.href}
+                      onClick={() => {
+                        if (window.innerWidth < 768) {
+                          onClose();
+                        }
+                      }}
+                    >
                       <div
                         className={cn(
                           "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
@@ -118,11 +125,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             ? "bg-primary text-primary-foreground"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
                         )}
-                        onClick={() => {
-                          if (window.innerWidth < 768) {
-                            onClose();
-                          }
-                        }}
                       >
                         {item.icon}
                         <span className="ml-3">{item.title}</span>
@@ -142,7 +144,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <ul className="space-y-1">
                 {accountItems.map((item) => (
                   <li key={item.href}>
-                    <Link href={item.href}>
+                    <Link 
+                      href={item.href}
+                      onClick={() => {
+                        if (window.innerWidth < 768) {
+                          onClose();
+                        }
+                      }}
+                    >
                       <div
                         className={cn(
                           "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer",
@@ -150,11 +159,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                             ? "bg-primary text-primary-foreground"
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
                         )}
-                        onClick={() => {
-                          if (window.innerWidth < 768) {
-                            onClose();
-                          }
-                        }}
                       >
                         {item.icon}
                         <span className="ml-3">{item.title}</span>
