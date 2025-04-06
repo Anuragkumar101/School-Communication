@@ -698,6 +698,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // === Chat & Conversation Routes ===
   
+  // Get current user's conversations
+  app.get("/api/conversations", async (req, res) => {
+    try {
+      if (!req.session?.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const userId = req.session.user.id;
+      const conversations = await storage.getConversations(userId);
+      
+      // For each conversation, get the participants
+      const conversationsWithParticipants = await Promise.all(
+        conversations.map(async (conversation) => {
+          const participants = await storage.getConversationParticipants(conversation.id);
+          return {
+            ...conversation,
+            participants
+          };
+        })
+      );
+      
+      res.json(conversationsWithParticipants);
+    } catch (error) {
+      console.error("Error fetching current user conversations:", error);
+      res.status(500).json({ message: "Failed to fetch conversations" });
+    }
+  });
+  
   // Get user's conversations
   app.get("/api/users/:userId/conversations", async (req, res) => {
     try {
